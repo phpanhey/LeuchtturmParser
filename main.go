@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"regexp"
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
@@ -123,7 +124,7 @@ func extractMenueForDay(menueText string, weekddayDe string) string {
 	if strings.Contains(result, "geschlossen") {
 		return "geschlossen"
 	}
-	return strings.ReplaceAll(result, "\n", " ")
+	return strings.ReplaceAll(cleanString(result), "\n", " ")
 
 }
 func deleteFirstLineWithWord(s, word string) string {
@@ -148,4 +149,9 @@ func saveFile(fileName string, menueJson map[string]string) {
 		fmt.Println("Error writing JSON to file:", err)
 		return
 	}
+}
+
+func cleanString(s string) string {
+	re := regexp.MustCompile(`\s+\d+(?:,\d+)*,[a-z]\s*`)
+	return re.ReplaceAllString(s, " ")
 }
