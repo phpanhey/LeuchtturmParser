@@ -14,6 +14,7 @@ import (
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/go-rod/rod"
+	"github.com/go-rod/rod/lib/launcher"
 )
 
 func main() {
@@ -49,7 +50,8 @@ func extractImageUrl(html string) string {
 }
 
 func extractHtml(url string) string {
-	browser := rod.New().MustConnect()
+	u := launcher.New().Set("no-sandbox").MustLaunch()
+	browser := rod.New().ControlURL(u).MustConnect()
 
 	page := browser.MustPage(url)
 
