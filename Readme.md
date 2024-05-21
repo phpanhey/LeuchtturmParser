@@ -1,9 +1,9 @@
 
 # Leuchtturmparser 🕯
-This Go project aims to extract menu information from the Leuchtturm's website using OCR (Optical Character Recognition). It parses the extracted data to provide users with a convenient way to view the menu items available for the day.
+This Go project aims to extract menu information from the Leuchtturm's website using OCR (Optical Character Recognition). It parses the extracted data to provide users with a convenient way to view the menu items available for week.
 
 ## How it works
-The project utilizes OCR to extract text from the menu card image fetched from Leuchtturm's website. Once the text is extracted, it parses it to identify the menu items available for the day. Users can then view these menu items in a readable format.
+The project utilizes OCR to extract text from the menu card image fetched from Leuchtturm's website. Once the text is extracted, it parses it to identify the menu items available for week. Users can then view these menu items in a readable format.
 
 ## Contributing
 Contributions are welcome! If you have any ideas for improvement, feel free to open an issue or submit a pull request.
