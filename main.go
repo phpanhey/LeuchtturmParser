@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -11,17 +10,19 @@ import (
 	"os/exec"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/PuerkitoBio/goquery"
-	"github.com/go-rod/rod"
-	"github.com/go-rod/rod/lib/launcher"
 )
 
 func main() {
 
-	html := extractHtml("https://zum-pusdorper-leuchtturm.jimdosite.com/mittach-rouladen-taxi/")
+	html, err := getHtml("https://zum-pusdorper-leuchtturm.jimdosite.com/mittach-rouladen-taxi/")
 
-	// use goquery to query the html
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	imageUrl := extractImageUrl(html)
 
 	imageName := "menue.jpg"
@@ -34,7 +35,9 @@ func main() {
 
 	menueJson := extractMenueAsJson(modifiedMenueText)
 
-	saveFile("menue.json", menueJson)
+	printMenue(menueJson)
+
+	//saveFile("menue.json", menueJson)
 
 }
 
@@ -49,21 +52,47 @@ func extractImageUrl(html string) string {
 	return strings.Split(res, " ")[0]
 }
 
-func extractHtml(url string) string {
-	u := launcher.New().Set("no-sandbox").MustLaunch()
-	browser := rod.New().ControlURL(u).MustConnect()
+func getHtml(url string) (string, error) {
+	client := &http.Client{
+		Timeout: 15 * time.Second,
+	}
 
-	page := browser.MustPage(url)
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return "", err
+	}
 
-	page.MustWaitLoad()
+	// Common Chrome desktop UA
+	req.Header.Set("User-Agent",
+		"Mozilla/5.0 (Windows NT 10.0; Win64; x64) "+
+			"AppleWebKit/537.36 (KHTML, like Gecko) "+
+			"Chrome/120.0.0.0 Safari/537.36")
 
-	html := page.MustHTML()
-	return html
+	// Optional but helpful extra headers
+	req.Header.Set("Accept",
+		"text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8")
+	req.Header.Set("Accept-Language", "en-US,en;q=0.9")
+	req.Header.Set("Connection", "keep-alive")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return "", fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+
+	return string(body), nil
 }
 
 func dowloadImage(url string, imagenName string) {
-	// download the image
-
 	res, err := http.Get(url)
 	if err != nil {
 		log.Fatal(err)
@@ -83,24 +112,22 @@ func dowloadImage(url string, imagenName string) {
 }
 
 func getTextFromImage(imageName string) string {
-	// Setup the tesseract command
-	cmd := exec.Command("tesseract", imageName, "stdout")
-
-	// Capture both standard output and standard error
+	cmd := exec.Command(
+		"tesseract",
+		imageName,
+		"stdout",
+		"-l", "deu",
+	)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
-	// Execute the command
 	err := cmd.Run()
 
-	// Check for errors
 	if err != nil {
 		log.Fatal(err)
 	}
-
 	return stdout.String()
-
 }
 
 func extractMenueAsJson(menueText string) map[string]string {
@@ -140,7 +167,7 @@ func deleteFirstLineWithWord(s, word string) string {
 	return strings.Join(lines, "\n")
 }
 
-func saveFile(fileName string, menueJson map[string]string) {
+/*func saveFile(fileName string, menueJson map[string]string) {
 	jsonData, err := json.Marshal(menueJson)
 	if err != nil {
 		fmt.Println("Error marshalling JSON:", err)
@@ -151,9 +178,14 @@ func saveFile(fileName string, menueJson map[string]string) {
 		fmt.Println("Error writing JSON to file:", err)
 		return
 	}
-}
+}*/
 
 func cleanString(s string) string {
 	re := regexp.MustCompile(`\s+\d+(?:,\d+)*,[a-z]\s*`)
 	return re.ReplaceAllString(s, " ")
+}
+
+func printMenue(menueJson map[string]string) {
+	weekday := time.Now().Weekday()
+	fmt.Println(menueJson[string(weekday)])
 }
