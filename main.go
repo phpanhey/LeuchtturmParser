@@ -2,9 +2,9 @@ package main
 
 import (
 	"bytes"
+	"flag"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"os/exec"
@@ -17,10 +17,22 @@ import (
 
 func main() {
 
-	html, err := getHtml("https://zum-pusdorper-leuchtturm.jimdosite.com/mittach-rouladen-taxi/")
+	hashtml := flag.Bool("hashtml", false, "Set when you provide the html file from outside. needs to be in same dir called 'content.html'.")
+	flag.Parse()
 
-	if err != nil {
-		log.Fatal(err)
+	html := ""
+	if *hashtml {
+		data, err := os.ReadFile("content.html")
+		if err != nil {
+			panic(err)
+		}
+		html = string(data)
+	} else {
+		var err error
+		html, err = getHtml("https://zum-pusdorper-leuchtturm.jimdosite.com/mittach-rouladen-taxi/")
+		if err != nil {
+			panic(err)
+		}
 	}
 
 	imageUrl := extractImageUrl(html)
@@ -45,7 +57,7 @@ func extractImageUrl(html string) string {
 	doc, err := goquery.NewDocumentFromReader(strings.NewReader(html))
 	// check error
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 	// find first image tag
 	res := doc.Find("img").First().AttrOr("srcset", "")
@@ -95,19 +107,19 @@ func getHtml(url string) (string, error) {
 func dowloadImage(url string, imagenName string) {
 	res, err := http.Get(url)
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 	defer res.Body.Close()
 
 	// create a file to store the image
 	file, err := os.Create(imagenName)
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 	defer file.Close()
 	_, err = io.Copy(file, res.Body)
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 }
 
@@ -121,11 +133,9 @@ func getTextFromImage(imageName string) string {
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
-
 	err := cmd.Run()
-
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 	return stdout.String()
 }
@@ -153,7 +163,7 @@ func extractMenueForDay(menueText string, weekddayDe string) string {
 	if strings.Contains(result, "geschlossen") {
 		return "geschlossen"
 	}
-	return strings.ReplaceAll(cleanString(result), "\n", " ")
+	return strings.TrimSpace(strings.ReplaceAll(cleanString(result), "\n", " "))
 
 }
 func deleteFirstLineWithWord(s, word string) string {
@@ -186,6 +196,8 @@ func cleanString(s string) string {
 }
 
 func printMenue(menueJson map[string]string) {
-	weekday := time.Now().Weekday()
-	fmt.Println(menueJson[string(weekday)])
+	msg := ""
+	weekday := time.Now().Weekday().String()
+	msg += menueJson[weekday] + ", Stinker"
+	fmt.Println(msg)
 }
